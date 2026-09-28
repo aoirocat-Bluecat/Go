@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>スワイプカウントダウン</title>
+  <title>Minimal Countdown</title>
   <style>
     * {
       box-sizing: border-box;
@@ -15,7 +15,7 @@
     }
 
     body {
-      background: #0f172a;
+      background: #090d16;
       color: #f8fafc;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       height: 100vh;
@@ -25,66 +25,50 @@
       justify-content: center;
       overflow: hidden;
       position: relative;
-      transition: background-color 0.4s ease;
+      transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* ゼロ到達時の画面全体のフラッシュ */
+    /* 0到達時の発光エフェクト */
     body.flash {
       animation: screenFlash 1.6s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
     }
 
     @keyframes screenFlash {
-      0% {
-        background-color: #ffffff;
-      }
-      20% {
-        background-color: #064e3b;
-      }
-      100% {
-        background-color: #022c22;
-      }
+      0% { background-color: #ffffff; }
+      20% { background-color: #064e3b; }
+      100% { background-color: #022c22; }
     }
 
-    /* 設定ボタンと入力フォーム */
-    .top-bar {
+    /* 右上：ミニマル設定アイコン */
+    .btn-settings {
       position: absolute;
       top: 24px;
-      width: 100%;
-      padding: 0 20px;
+      right: 24px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      z-index: 10;
-    }
-
-    .indicator {
-      font-size: 0.85rem;
-      color: #64748b;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      transition: color 0.3s;
-    }
-
-    body.flash .indicator {
-      color: #86efac;
-    }
-
-    .edit-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #e2e8f0;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 0.8rem;
+      justify-content: center;
       cursor: pointer;
-      backdrop-filter: blur(8px);
-      transition: all 0.2s ease;
+      z-index: 20;
+      transition: all 0.2s;
     }
 
-    .edit-btn:hover {
+    .btn-settings:hover {
       background: rgba(255, 255, 255, 0.15);
+      transform: rotate(30deg);
     }
 
+    .btn-settings svg {
+      width: 20px;
+      height: 20px;
+      stroke: #94a3b8;
+    }
+
+    /* メイン操作エリア */
     .container {
       display: flex;
       flex-direction: column;
@@ -93,6 +77,7 @@
       width: 100%;
       height: 100%;
       cursor: grab;
+      position: relative;
       z-index: 2;
     }
 
@@ -100,58 +85,123 @@
       cursor: grabbing;
     }
 
+    /* 上下スワイプを直感的に伝えるインジケーター（<>を上下にした山型デザイン） */
+    .swipe-hint {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+      opacity: 0.35;
+      transition: opacity 0.3s, transform 0.2s;
+    }
+
+    .swipe-hint.top {
+      top: 18%;
+      animation: floatUp 2s ease-in-out infinite;
+    }
+
+    .swipe-hint.bottom {
+      bottom: 18%;
+      animation: floatDown 2s ease-in-out infinite;
+    }
+
+    @keyframes floatUp {
+      0%, 100% { transform: translateY(0); opacity: 0.25; }
+      50% { transform: translateY(-8px); opacity: 0.6; }
+    }
+
+    @keyframes floatDown {
+      0%, 100% { transform: translateY(0); opacity: 0.25; }
+      50% { transform: translateY(8px); opacity: 0.6; }
+    }
+
+    .swipe-hint svg {
+      width: 32px;
+      height: 32px;
+      stroke: #94a3b8;
+    }
+
+    /* カウント数字表示 */
+    .display-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+    }
+
     .display {
-      font-size: 7.5rem;
+      font-size: 8rem;
       font-weight: 900;
       letter-spacing: -2px;
       text-align: center;
       padding: 0 20px;
       word-break: break-word;
-      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
-      min-height: 160px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s;
     }
 
-    /* ゼロ到達時の文字スタイル */
+    /* リセット（ダブルクリック）時のバウンド効果 */
+    .pop-reset {
+      animation: resetPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes resetPop {
+      0% { transform: scale(0.7); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* 到達時文字スタイル */
     .go {
       color: #ecfdf5;
       text-shadow: 
         0 0 10px #4ade80,
         0 0 30px #22c55e,
-        0 0 60px #16a34a,
-        0 0 100px #15803d;
-      animation: goPop 0.8s ease-in-out infinite alternate;
+        0 0 70px #16a34a,
+        0 0 120px #15803d;
+      animation: goPulse 0.8s ease-in-out infinite alternate;
     }
 
-    @keyframes goPop {
+    @keyframes goPulse {
       from { transform: scale(1.15); }
       to { transform: scale(1.3); }
     }
 
-    .hint {
+    /* 一時停止ビジュアルアイコン */
+    .pause-indicator {
       position: absolute;
-      bottom: 30px;
-      font-size: 0.85rem;
-      color: #94a3b8;
-      text-align: center;
-      line-height: 1.6;
+      top: -30px;
+      display: flex;
+      gap: 6px;
+      opacity: 0;
+      transform: scale(0.6);
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       pointer-events: none;
-      z-index: 2;
-      transition: color 0.3s;
     }
 
-    body.flash .hint {
-      color: #6ee7b7;
+    .pause-indicator span {
+      width: 6px;
+      height: 24px;
+      background: #f59e0b;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
     }
 
-    /* 文字設定ダイアログモーダル */
+    body.paused .pause-indicator {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    body.paused .display {
+      opacity: 0.6;
+    }
+
+    /* 文字編集モーダル */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(4px);
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -169,32 +219,27 @@
     .modal-card {
       background: #1e293b;
       padding: 24px;
-      border-radius: 16px;
+      border-radius: 20px;
       width: 85%;
       max-width: 320px;
       border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-    }
-
-    .modal-card h3 {
-      font-size: 1rem;
-      margin-bottom: 12px;
-      color: #f8fafc;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
     }
 
     .modal-card input {
       width: 100%;
-      padding: 10px 12px;
-      background: #0f172a;
+      padding: 12px 14px;
+      background: #090d16;
       border: 1px solid #334155;
-      border-radius: 8px;
+      border-radius: 10px;
       color: #fff;
-      font-size: 1.1rem;
-      margin-bottom: 16px;
+      font-size: 1.15rem;
+      margin-bottom: 20px;
       outline: none;
       user-select: auto;
       -webkit-user-select: auto;
       touch-action: auto;
+      text-align: center;
     }
 
     .modal-card input:focus {
@@ -203,17 +248,21 @@
 
     .modal-actions {
       display: flex;
-      justify-content: flex-end;
-      gap: 10px;
+      justify-content: space-between;
+      gap: 12px;
     }
 
     .btn {
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 0.9rem;
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
       border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .btn-cancel {
@@ -223,37 +272,57 @@
 
     .btn-save {
       background: #22c55e;
-      color: #0f172a;
+      color: #090d16;
     }
   </style>
 </head>
 <body>
 
-  <!-- 上部バー -->
-  <div class="top-bar">
-    <div class="indicator" id="statusText">スワイプして時間を設定</div>
-    <button class="edit-btn" id="openModalBtn">⚙ 文字を変更</button>
-  </div>
+  <!-- 設定アイコン（文字なし） -->
+  <button class="btn-settings" id="openModalBtn" aria-label="Settings">
+    <svg fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+  </button>
 
-  <!-- スワイプ操作エリア -->
+  <!-- タッチ・スワイプエリア -->
   <div class="container" id="touchArea">
-    <div class="display" id="display">3</div>
+    <!-- 上シェブロン (︿) -->
+    <div class="swipe-hint top">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </div>
+
+    <!-- カウント数値表示 & 一時停止マーク -->
+    <div class="display-box">
+      <div class="pause-indicator" id="pauseIndicator">
+        <span></span>
+        <span></span>
+      </div>
+      <div class="display" id="display">3</div>
+    </div>
+
+    <!-- 下シェブロン (﹀) -->
+    <div class="swipe-hint bottom">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    </div>
   </div>
 
-  <div class="hint">
-    👆 上にスワイプ：増やす<br>
-    👇 下にスワイプ：減らす<br>
-    ※指を離すとカウントダウン開始
-  </div>
-
-  <!-- 終了時テキスト変更用モーダル -->
+  <!-- モーダル（テキスト変更用） -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal-card">
-      <h3>到達時の文字を設定</h3>
-      <input type="text" id="customTextInput" maxlength="15" placeholder="例: GO!, スタート!, 発射!">
+      <input type="text" id="customTextInput" maxlength="15">
       <div class="modal-actions">
-        <button class="btn btn-cancel" id="closeModalBtn">キャンセル</button>
-        <button class="btn btn-save" id="saveTextBtn">保存</button>
+        <button class="btn btn-cancel" id="closeModalBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <button class="btn btn-save" id="saveTextBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </button>
       </div>
     </div>
   </div>
@@ -262,59 +331,60 @@
     const body = document.body;
     const display = document.getElementById('display');
     const touchArea = document.getElementById('touchArea');
-    const statusText = document.getElementById('statusText');
 
-    // モーダル関連要素
     const modalOverlay = document.getElementById('modalOverlay');
     const openModalBtn = document.getElementById('openModalBtn');
     const closeModalBtn = document.getElementById('closeModalBtn');
     const saveTextBtn = document.getElementById('saveTextBtn');
     const customTextInput = document.getElementById('customTextInput');
 
-    // 保存されているテキスト、なければデフォルト「GO!」
     let finishText = localStorage.getItem('finishText') || 'GO!';
-
     let count = 3;
     let timerId = null;
     let isTouching = false;
+    let isPaused = false;
     let startY = 0;
     let accumulatedDeltaY = 0;
-    const SWIPE_THRESHOLD = 35; // 感度
+    const SWIPE_THRESHOLD = 32;
 
-    // 表示更新
-    function updateDisplay() {
+    // ダブルタップ検知用
+    let lastTapTime = 0;
+
+    function updateDisplay(triggerAnim = false) {
       if (count === 0) {
         display.textContent = finishText;
         display.classList.add('go');
         body.classList.add('flash');
-        statusText.textContent = finishText;
 
-        // 文字数が多い場合にフォントサイズを動的に調整
         if (finishText.length > 5) {
           display.style.fontSize = '4.5rem';
         } else if (finishText.length > 3) {
           display.style.fontSize = '6rem';
         } else {
-          display.style.fontSize = '7.5rem';
+          display.style.fontSize = '8rem';
         }
       } else {
         display.textContent = count;
         display.classList.remove('go');
         body.classList.remove('flash');
-        display.style.fontSize = '7.5rem';
+        display.style.fontSize = '8rem';
+      }
+
+      if (triggerAnim) {
+        display.classList.remove('pop-reset');
+        void display.offsetWidth; // リフロー発生
+        display.classList.add('pop-reset');
       }
     }
 
-    // カウントダウン開始
     function startCountdown() {
+      if (isPaused) return;
       stopCountdown();
 
       if (count <= 0) {
         updateDisplay();
         return;
       }
-
-      statusText.textContent = 'カウントダウン中...';
 
       timerId = setInterval(() => {
         count--;
@@ -327,7 +397,6 @@
       }, 1000);
     }
 
-    // カウントダウン停止
     function stopCountdown() {
       if (timerId !== null) {
         clearInterval(timerId);
@@ -335,23 +404,67 @@
       }
     }
 
-    // タッチ / マウスダウン開始
-    function handleStart(clientY) {
-      // モーダル表示中はスワイプ無効
-      if (modalOverlay.classList.contains('active')) return;
+    // 一時停止の切り替え
+    function togglePause() {
+      if (count <= 0) return;
 
-      isTouching = true;
-      startY = clientY;
-      accumulatedDeltaY = 0;
-
-      stopCountdown();
-      statusText.textContent = '設定中...';
+      isPaused = !isPaused;
+      if (isPaused) {
+        stopCountdown();
+        body.classList.add('paused');
+      } else {
+        body.classList.remove('paused');
+        startCountdown();
+      }
     }
 
-    // 移動（スワイプ / ドラッグ）
-    function handleMove(clientY) {
-      if (!isTouching) return;
+    // 3秒に自動リセット
+    function resetToThree() {
+      stopCountdown();
+      isPaused = false;
+      body.classList.remove('paused');
+      count = 3;
+      updateDisplay(true);
+      startCountdown();
+    }
 
+    // === タッチイベント処理 ===
+    touchArea.addEventListener('touchstart', (e) => {
+      if (modalOverlay.classList.contains('active')) return;
+
+      // 2本指タップ判定：即座に一時停止
+      if (e.touches.length >= 2) {
+        isTouching = false;
+        togglePause();
+        return;
+      }
+
+      // 1本指の場合
+      if (e.touches.length === 1) {
+        // ダブルタップ検知（300ms以内）
+        const currentTime = new Date().getTime();
+        const tapInterval = currentTime - lastTapTime;
+        if (tapInterval < 300 && tapInterval > 0) {
+          resetToThree();
+          lastTapTime = 0;
+          return;
+        }
+        lastTapTime = currentTime;
+
+        isTouching = true;
+        isPaused = false;
+        body.classList.remove('paused');
+        startY = e.touches[0].clientY;
+        accumulatedDeltaY = 0;
+        stopCountdown();
+      }
+    }, { passive: false });
+
+    touchArea.addEventListener('touchmove', (e) => {
+      if (!isTouching || e.touches.length !== 1) return;
+      e.preventDefault();
+
+      const clientY = e.touches[0].clientY;
       const diffY = clientY - startY;
       accumulatedDeltaY += diffY;
       startY = clientY;
@@ -361,47 +474,75 @@
           count++;
           accumulatedDeltaY += SWIPE_THRESHOLD;
         } else {
-          if (count > 0) {
-            count--;
-          }
+          if (count > 0) count--;
           accumulatedDeltaY -= SWIPE_THRESHOLD;
         }
         updateDisplay();
       }
-    }
-
-    // タッチ終了（指を離した時）
-    function handleEnd() {
-      if (!isTouching) return;
-      isTouching = false;
-      startCountdown();
-    }
-
-    // === タッチイベント ===
-    touchArea.addEventListener('touchstart', (e) => {
-      handleStart(e.touches[0].clientY);
     }, { passive: false });
 
-    touchArea.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      handleMove(e.touches[0].clientY);
-    }, { passive: false });
+    touchArea.addEventListener('touchend', (e) => {
+      if (e.touches.length === 0 && isTouching) {
+        isTouching = false;
+        startCountdown();
+      }
+    });
 
-    touchArea.addEventListener('touchend', handleEnd);
-    touchArea.addEventListener('touchcancel', handleEnd);
+    // === マウス & PC操作 ===
+    // ダブルクリックで3秒リセット
+    touchArea.addEventListener('dblclick', (e) => {
+      if (e.target.closest('#openModalBtn')) return;
+      resetToThree();
+    });
 
-    // === マウスイベント ===
     touchArea.addEventListener('mousedown', (e) => {
-      handleStart(e.clientY);
+      if (modalOverlay.classList.contains('active')) return;
+      if (e.target.closest('#openModalBtn')) return;
+
+      isTouching = true;
+      isPaused = false;
+      body.classList.remove('paused');
+      startY = e.clientY;
+      accumulatedDeltaY = 0;
+      stopCountdown();
     });
 
     window.addEventListener('mousemove', (e) => {
-      handleMove(e.clientY);
+      if (!isTouching) return;
+
+      const diffY = e.clientY - startY;
+      accumulatedDeltaY += diffY;
+      startY = e.clientY;
+
+      while (Math.abs(accumulatedDeltaY) >= SWIPE_THRESHOLD) {
+        if (accumulatedDeltaY < 0) {
+          count++;
+          accumulatedDeltaY += SWIPE_THRESHOLD;
+        } else {
+          if (count > 0) count--;
+          accumulatedDeltaY -= SWIPE_THRESHOLD;
+        }
+        updateDisplay();
+      }
     });
 
-    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('mouseup', () => {
+      if (isTouching) {
+        isTouching = false;
+        startCountdown();
+      }
+    });
 
-    // === 設定モーダルの開閉・保存処理 ===
+    // スペースキーで一時停止トグル
+    window.addEventListener('keydown', (e) => {
+      if (modalOverlay.classList.contains('active')) return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePause();
+      }
+    });
+
+    // === モーダル操作 ===
     openModalBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       stopCountdown();
@@ -424,7 +565,7 @@
       updateDisplay();
     });
 
-    // 初期表示
+    // 初期化
     updateDisplay();
   </script>
 </body>
